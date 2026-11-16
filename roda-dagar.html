@@ -1,0 +1,316 @@
+<title>Röda dagar</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;700;800&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: almanac year view. Header with year switcher and summary, 12 month grids with ISO week numbers, then the list of holidays */
+:root {
+  --bg: #f6f7f9;
+  --card: #ffffff;
+  --ink: #1a1d24;
+  --muted: #687080;
+  --line: #e2e5ea;
+  --red: #c4122f;
+  --red-soft: #fbe4e7;
+  --eve: #b35c00;
+  --display: "Schibsted Grotesk", "Segoe UI", system-ui, sans-serif;
+  --body: "Inter", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121418; --card: #1a1d23; --ink: #e8eaee; --muted: #8f97a6; --line: #2a2e36;
+    --red: #ff5a6a; --red-soft: #3a1b20; --eve: #f0a04b; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121418; --card: #1a1d23; --ink: #e8eaee; --muted: #8f97a6; --line: #2a2e36;
+  --red: #ff5a6a; --red-soft: #3a1b20; --eve: #f0a04b; color-scheme: dark;
+}
+body {
+  background: var(--bg); color: var(--ink); font: 14px/1.5 var(--body);
+  padding-block: 28px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 20px; }
+.eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-weight: 600; }
+h1 { margin: 2px 0 0; font: 800 clamp(34px, 6vw, 56px)/1 var(--display); letter-spacing: -0.03em; display: flex; align-items: center; gap: 14px; }
+h1 .yr { color: var(--red); font-variant-numeric: tabular-nums; }
+.nav { display: flex; gap: 8px; }
+.nav button {
+  font: 600 14px var(--body); color: var(--ink); background: var(--card); border: 1px solid var(--line);
+  border-radius: 8px; padding: 8px 14px; cursor: pointer;
+}
+.nav button:hover { border-color: var(--muted); }
+button:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+.summary { display: flex; flex-wrap: wrap; gap: 8px 28px; color: var(--muted); }
+.summary b { color: var(--ink); font-weight: 600; }
+.summary .next b { color: var(--red); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.dot { width: 18px; height: 18px; border-radius: 5px; display: inline-grid; place-items: center; font-size: 10px; font-weight: 700; }
+.months { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+.month { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 12px 12px; }
+.month h2 { margin: 0 0 8px 4px; font: 700 16px var(--display); }
+.grid { display: grid; grid-template-columns: 24px repeat(7, 1fr); gap: 2px; text-align: center; font-variant-numeric: tabular-nums; }
+.grid .h { font-size: 11px; color: var(--muted); font-weight: 600; padding-bottom: 2px; }
+.grid .h.sun { color: var(--red); }
+.wk { font-size: 10px; color: var(--muted); align-self: center; }
+.d { font-size: 13px; line-height: 28px; border-radius: 6px; }
+.d.sun { color: var(--red); }
+.d.hol { background: var(--red); color: #fff; font-weight: 600; }
+.d.eve { color: var(--eve); font-weight: 600; box-shadow: inset 0 -2px 0 var(--eve); border-radius: 0; }
+.d.klam { outline: 1.5px dashed var(--muted); outline-offset: -3px; }
+.d.today { box-shadow: inset 0 0 0 2px var(--ink); font-weight: 700; }
+.d.hol.today { box-shadow: inset 0 0 0 2px var(--card), 0 0 0 2px var(--ink); }
+.d[data-d] { cursor: pointer; transition: background-color 0.12s; }
+.d[data-d]:hover { background: var(--line); }
+.d.hol[data-d]:hover { background: var(--red); filter: brightness(1.12); }
+.d.sel, .d.hol.sel { box-shadow: 0 0 0 2px var(--red); position: relative; z-index: 1; }
+.info {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  display: flex; align-items: center; gap: 16px; min-height: 64px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px;
+  box-shadow: 0 6px 18px -12px rgba(0,0,0,0.35);
+}
+.info .big { flex: none; width: 48px; height: 48px; border-radius: 10px; display: grid; place-items: center; font: 800 22px var(--display); background: var(--bg); font-variant-numeric: tabular-nums; }
+.info .big.red { background: var(--red); color: #fff; }
+.info .big.eve { color: var(--eve); box-shadow: inset 0 -3px 0 var(--eve); }
+.info .big.klam { outline: 2px dashed var(--muted); outline-offset: -5px; }
+.info .t { font: 700 16px var(--display); }
+.info .s { color: var(--muted); }
+.info .s b { color: var(--ink); }
+.info .rel { color: var(--ink); font-weight: 600; }
+tbody tr { cursor: pointer; }
+tbody tr:hover td { background: var(--bg); }
+tbody tr.sel td { background: var(--red-soft); opacity: 1; }
+.list-wrap { background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 10px 16px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+td.sv { font-weight: 600; }
+td.en { color: var(--muted); }
+tr.past td { opacity: 0.5; }
+.tag { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+.tag.red { background: var(--red-soft); color: var(--red); }
+.tag.eve { color: var(--eve); border: 1px solid var(--eve); }
+.tag.wkend { color: var(--muted); border: 1px solid var(--line); }
+h3 { margin: 0 0 10px; font: 700 20px var(--display); }
+.note { color: var(--muted); font-size: 13px; max-width: 70ch; margin: 10px 0 0; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">Swedish public holidays</div>
+      <h1>Röda dagar <span class="yr" id="year">2026</span></h1>
+    </div>
+    <div class="nav">
+      <button id="prev" type="button" aria-label="Previous year">← <span id="prevY"></span></button>
+      <button id="today" type="button">This year</button>
+      <button id="next" type="button" aria-label="Next year"><span id="nextY"></span> →</button>
+    </div>
+  </header>
+
+  <div class="summary" id="summary"></div>
+
+  <div class="info" id="info" aria-live="polite"></div>
+
+  <div class="legend">
+    <span><i class="dot" style="background:var(--red);color:#fff">6</i> Red day (public holiday)</span>
+    <span><i class="dot" style="color:var(--red)">7</i> Sunday</span>
+    <span><i class="dot" style="color:var(--eve);box-shadow:inset 0 -2px 0 var(--eve);border-radius:0">24</i> Eve, usually a day off</span>
+    <span><i class="dot" style="outline:1.5px dashed var(--muted);outline-offset:-3px">15</i> Klämdag (squeeze day)</span>
+  </div>
+
+  <section class="months" id="months"></section>
+
+  <section>
+    <h3>All red days and eves</h3>
+    <div class="list-wrap"><table>
+      <thead><tr><th>Date</th><th>Day</th><th>Swedish</th><th>English</th><th>Type</th></tr></thead>
+      <tbody id="list"></tbody>
+    </table></div>
+    <p class="note">Every Sunday is also a red day. Eves (afton) are not official public holidays, but most workplaces treat them as days off. A klämdag is a single working day squeezed between a red day and a weekend, a popular day to take off.</p>
+  </section>
+</div>
+
+<script>
+const MONTHS = ["Januari","Februari","Mars","April","Maj","Juni","Juli","Augusti","September","Oktober","November","December"];
+const DAYS_SV = ["må","ti","on","to","fr","lö","sö"];
+const DAYS_EN = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const key = d => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+
+function easter(y) {
+  const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4;
+  const f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 114);
+  const n = h + l - 7 * m + 114;
+  return new Date(y, Math.floor(n / 31) - 1, (n % 31) + 1);
+}
+function saturdayBetween(y, month, from) {
+  for (let i = 0; i < 7; i++) { const d = new Date(y, month, from + i); if (d.getDay() === 6) return d; }
+}
+function holidays(y) {
+  const e = easter(y);
+  const mids = saturdayBetween(y, 5, 20);
+  const allh = saturdayBetween(y, 9, 31);
+  return [
+    [new Date(y, 0, 1), "Nyårsdagen", "New Year's Day", "red"],
+    [new Date(y, 0, 6), "Trettondedag jul", "Epiphany", "red"],
+    [addDays(e, -2), "Långfredagen", "Good Friday", "red"],
+    [addDays(e, -1), "Påskafton", "Easter Eve", "eve"],
+    [e, "Påskdagen", "Easter Sunday", "red"],
+    [addDays(e, 1), "Annandag påsk", "Easter Monday", "red"],
+    [new Date(y, 4, 1), "Första maj", "May Day", "red"],
+    [addDays(e, 39), "Kristi himmelsfärdsdag", "Ascension Day", "red"],
+    [addDays(e, 49), "Pingstdagen", "Pentecost", "red"],
+    [new Date(y, 5, 6), "Sveriges nationaldag", "National Day", "red"],
+    [addDays(mids, -1), "Midsommarafton", "Midsummer Eve", "eve"],
+    [mids, "Midsommardagen", "Midsummer Day", "red"],
+    [allh, "Alla helgons dag", "All Saints' Day", "red"],
+    [new Date(y, 11, 24), "Julafton", "Christmas Eve", "eve"],
+    [new Date(y, 11, 25), "Juldagen", "Christmas Day", "red"],
+    [new Date(y, 11, 26), "Annandag jul", "Boxing Day", "red"],
+    [new Date(y, 11, 31), "Nyårsafton", "New Year's Eve", "eve"],
+  ].map(([date, sv, en, type]) => ({ date, sv, en, type }))
+   .sort((a, b) => a.date - b.date);
+}
+function isoWeek(dt) {
+  const d = new Date(Date.UTC(dt.getFullYear(), dt.getMonth(), dt.getDate()));
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const y0 = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d - y0) / 864e5 + 1) / 7);
+}
+
+const now = new Date();
+const todayKey = key(now);
+let year = now.getFullYear();
+let selected = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+let ctx;
+const WEEK_SV = ["Söndag","Måndag","Tisdag","Onsdag","Torsdag","Fredag","Lördag"];
+
+function showInfo() {
+  const el = document.getElementById("info");
+  if (!selected) { el.innerHTML = `<div class="s">Click any day in the calendar, or a row in the list, to see what kind of day it is.</div>`; return; }
+  const d = selected, h = ctx.map.get(key(d)), wd = d.getDay();
+  let status, cls = "";
+  if (h && h.type === "red") { status = `Red day: <b>${h.sv}</b> (${h.en}).`; cls = "red"; }
+  else if (h) { status = `Eve: <b>${h.sv}</b> (${h.en}). Not an official holiday, but usually a day off.`; cls = "eve"; }
+  else if (wd === 0) { status = "Sunday, so a red day."; cls = "red"; }
+  else if (ctx.isKlam(d)) { status = "<b>Klämdag</b>: a working day squeezed between a red day and the weekend."; cls = "klam"; }
+  else if (wd === 6) status = "Saturday, a day off for most people.";
+  else status = "Ordinary working day.";
+  const t0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diff = Math.round((d - t0) / 864e5);
+  const rel = diff === 0 ? "Today" : diff > 0 ? `In ${diff} day${diff === 1 ? "" : "s"}` : `${-diff} day${diff === -1 ? "" : "s"} ago`;
+  el.innerHTML = `<div class="big ${cls}">${d.getDate()}</div><div>
+    <div class="t">${WEEK_SV[wd]} ${d.getDate()} ${MONTHS[d.getMonth()].toLowerCase()} ${d.getFullYear()} · vecka ${isoWeek(d)}</div>
+    <div class="s">${status} <span class="rel">${rel}.</span></div></div>`;
+}
+
+function render() {
+  const hols = holidays(year);
+  const map = new Map(hols.map(h => [key(h.date), h]));
+  const isOff = d => d.getDay() === 0 || d.getDay() === 6 || map.get(key(d))?.type === "red";
+  const isKlam = d => {
+    const wd = d.getDay();
+    if (wd === 0 || wd === 6 || map.has(key(d))) return false;
+    const p = addDays(d, -1), n = addDays(d, 1);
+    const pHol = map.get(key(p))?.type === "red", nHol = map.get(key(n))?.type === "red";
+    return isOff(p) && isOff(n) && (pHol || nHol);
+  };
+  ctx = { map, isKlam };
+  if (selected && selected.getFullYear() !== year) selected = null;
+  const selKey = selected ? key(selected) : "";
+
+  document.getElementById("year").textContent = year;
+  document.getElementById("prevY").textContent = year - 1;
+  document.getElementById("nextY").textContent = year + 1;
+
+  // Summary
+  const reds = hols.filter(h => h.type === "red");
+  const weekdayReds = reds.filter(h => h.date.getDay() >= 1 && h.date.getDay() <= 5).length;
+  let sundays = 0, klams = 0;
+  for (let d = new Date(year, 0, 1); d.getFullYear() === year; d = addDays(d, 1)) {
+    if (d.getDay() === 0) sundays++;
+    if (isKlam(d)) klams++;
+  }
+  const upcoming = reds.find(h => h.date >= new Date(now.getFullYear(), now.getMonth(), now.getDate()));
+  let nextHtml = "";
+  if (upcoming) {
+    const days = Math.round((upcoming.date - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 864e5);
+    nextHtml = `<span class="next">Next: <b>${upcoming.sv}</b>, ${upcoming.date.getDate()} ${MONTHS[upcoming.date.getMonth()].toLowerCase()} (${days === 0 ? "today" : `in ${days} day${days === 1 ? "" : "s"}`})</span>`;
+  }
+  document.getElementById("summary").innerHTML =
+    `<span><b>${reds.length}</b> public holidays</span>
+     <span><b>${weekdayReds}</b> fall on a weekday</span>
+     <span><b>${sundays}</b> Sundays</span>
+     <span><b>${klams}</b> klämdagar</span>${nextHtml}`;
+
+  // Months
+  const box = document.getElementById("months");
+  box.innerHTML = "";
+  for (let m = 0; m < 12; m++) {
+    const first = new Date(year, m, 1);
+    const offset = (first.getDay() + 6) % 7;
+    const len = new Date(year, m + 1, 0).getDate();
+    const rows = Math.ceil((offset + len) / 7);
+    let html = `<div class="h">v.</div>` + DAYS_SV.map((d, i) => `<div class="h${i === 6 ? " sun" : ""}">${d}</div>`).join("");
+    for (let r = 0; r < rows; r++) {
+      html += `<div class="wk">${isoWeek(new Date(year, m, 1 - offset + r * 7))}</div>`;
+      for (let c = 0; c < 7; c++) {
+        const dn = r * 7 + c - offset + 1;
+        if (dn < 1 || dn > len) { html += `<div></div>`; continue; }
+        const d = new Date(year, m, dn), h = map.get(key(d));
+        const cls = ["d"];
+        if (c === 6) cls.push("sun");
+        if (h) cls.push(h.type === "red" ? "hol" : "eve");
+        if (isKlam(d)) cls.push("klam");
+        if (key(d) === todayKey) cls.push("today");
+        if (key(d) === selKey) cls.push("sel");
+        const title = h ? `${h.sv} (${h.en})` : isKlam(d) ? "Klämdag" : "";
+        html += `<div class="${cls.join(" ")}" data-d="${key(d)}"${title ? ` title="${title}"` : ""}>${dn}</div>`;
+      }
+    }
+    box.insertAdjacentHTML("beforeend", `<div class="month"><h2>${MONTHS[m]}</h2><div class="grid">${html}</div></div>`);
+  }
+
+  // List
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  document.getElementById("list").innerHTML = hols.map(h => {
+    const wd = h.date.getDay();
+    const tag = h.type === "eve" ? `<span class="tag eve">Eve</span>`
+      : (wd === 0 || wd === 6) ? `<span class="tag wkend">Red day · weekend</span>` : `<span class="tag red">Red day</span>`;
+    return `<tr data-d="${key(h.date)}" class="${h.date < startToday ? "past" : ""}${key(h.date) === selKey ? " sel" : ""}">
+      <td>${h.date.getDate()} ${MONTHS[h.date.getMonth()].slice(0, 3).toLowerCase()}</td>
+      <td>${DAYS_EN[wd]}</td><td class="sv">${h.sv}</td><td class="en">${h.en}</td><td>${tag}</td></tr>`;
+  }).join("");
+  showInfo();
+}
+
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-d]");
+  if (!t) return;
+  const [y, m, d] = t.dataset.d.split("-").map(Number);
+  selected = new Date(y, m, d);
+  render();
+  if (t.tagName === "TR") {
+    const smooth = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+    document.querySelector(`.d[data-d="${t.dataset.d}"]`)?.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "center" });
+  }
+});
+
+document.getElementById("prev").onclick = () => { year--; render(); };
+document.getElementById("next").onclick = () => { year++; render(); };
+document.getElementById("today").onclick = () => { year = now.getFullYear(); selected = new Date(now.getFullYear(), now.getMonth(), now.getDate()); render(); };
+document.addEventListener("keydown", e => {
+  if (e.key === "ArrowLeft") { year--; render(); }
+  if (e.key === "ArrowRight") { year++; render(); }
+});
+render();
+</script>
